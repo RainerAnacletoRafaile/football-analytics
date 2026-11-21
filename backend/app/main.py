@@ -8,7 +8,7 @@ from backend.app.core.config import get_settings
 from backend.app.services.api_football import ApiFootballClient, ApiFootballError
 
 settings = get_settings()
-FRONTEND_DIR = Path(__file__).resolve().parents[3] / "frontend"
+FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
 
 app = FastAPI(
     title=settings.app_name,
