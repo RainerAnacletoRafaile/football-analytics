@@ -116,3 +116,32 @@
 .league-context-grid .stat-card strong{font-size:21px}
 .goal-chart:after{content:"";display:block}
 @media(max-width:600px){.analysis-controls-simple{grid-template-columns:1fr}.analysis-controls-simple button{width:100%}.league-context-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.data-quality{align-items:flex-start;flex-direction:column;gap:5px}}
+
+
+/* Matchup estimator */
+.matchup-panel{padding:22px;background:linear-gradient(145deg,#121d31,#0e1728);border:1px solid #30425e;border-radius:15px}
+.matchup-controls{display:grid;grid-template-columns:1.2fr 1.2fr 1.2fr .7fr auto;gap:10px;align-items:end}
+.matchup-controls label{display:flex;flex-direction:column;gap:8px;color:#9aa9bf;font-size:9px;font-weight:700;letter-spacing:1px;min-width:0}
+.matchup-controls select{width:100%;min-width:0;padding:12px;background:#101b2d;color:#eef4ff;border:1px solid #30425e;border-radius:8px;font:12px "DM Sans",sans-serif}
+.matchup-controls button{min-height:40px;padding:0 15px}
+.matchup-summary{display:flex;justify-content:space-between;gap:15px;align-items:center;margin:20px 0 12px;padding:16px;background:#0b1424;border:1px solid #263750;border-radius:10px}
+.matchup-summary h3{font:600 19px "Space Grotesk",sans-serif;margin:0 0 5px}
+.matchup-summary p{font-size:10px;color:var(--muted);margin:0}
+.expected-goals{display:flex;gap:12px;text-align:center}
+.expected-goals strong{display:block;font:700 25px "Space Grotesk",sans-serif;color:var(--green)}
+.expected-goals small{font-size:9px;color:#91a0b8}
+.market-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.market-card{padding:14px;background:#0d1728;border:1px solid #263750;border-radius:10px}
+.market-card-top{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.market-card b{font-size:11px}.market-card strong{font:600 21px "Space Grotesk",sans-serif;color:var(--green)}
+.market-card .trend-bar{height:6px;background:#26344a;border-radius:20px;overflow:hidden;margin:10px 0}
+.market-card .trend-bar span{display:block;height:100%;background:linear-gradient(90deg,#78b83c,var(--green));border-radius:20px}
+.market-card p{font-size:10px;line-height:1.5;color:#aab8cb;margin:0}
+.scoreline-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.scoreline-card{text-align:center;padding:12px 5px;background:#0d1728;border:1px solid #263750;border-radius:9px}
+.scoreline-card b{display:block;font:600 17px "Space Grotesk",sans-serif}.scoreline-card small{font-size:9px;color:var(--green)}
+.model-notes{margin-top:15px;padding:14px;background:#101b2d;border:1px solid #30425e;border-radius:10px}
+.model-notes p,.model-notes li{font-size:10px;line-height:1.65;color:#aab8cb}
+.model-notes ul{padding-left:18px;margin-bottom:0}
+@media(max-width:1050px){.matchup-controls{grid-template-columns:repeat(2,minmax(0,1fr))}.matchup-controls button{grid-column:1/-1}}
+@media(max-width:600px){.matchup-panel{padding:15px}.matchup-controls{grid-template-columns:1fr}.matchup-controls button{grid-column:auto;width:100%}.market-grid{grid-template-columns:1fr}.scoreline-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.matchup-summary{align-items:flex-start;flex-direction:column}}
