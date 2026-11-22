@@ -1,49 +1,37 @@
 # Football Analytics
 
-Sistema personal de análisis estadístico de fútbol. El objetivo es transformar datos recientes de equipos y jugadores en indicadores descriptivos y estimaciones de probabilidad explicables.
-
-> Herramienta informativa y experimental. No garantiza resultados deportivos ni beneficios económicos. Las estimaciones deben mostrar su metodología, limitaciones e incertidumbre.
-
-## Stack
-- Python 3.11+
-- FastAPI
-- HTTPX
-- Pydantic Settings
-- API-Football (API v3)
-- HTML, CSS y JavaScript
-
-## Estructura
-```
-backend/
-  app/
-    main.py
-    core/config.py
-    services/api_football.py
-frontend/
-  index.html
-  css/styles.css
-  js/app.js
-.env.example
-.gitignore
-requirements.txt
-```
-
-## Puesta en marcha
-1. Crear y activar un entorno virtual.
-2. Instalar dependencias: `pip install -r requirements.txt`
-3. Copiar `.env.example` a `.env` y añadir la clave de API-Football en `API_FOOTBALL_KEY`.
-4. Ejecutar desde la raíz: `uvicorn backend.app.main:app --reload`
-5. Abrir `http://127.0.0.1:8000` para ver el dashboard o `http://127.0.0.1:8000/docs` para la documentación de la API.
-
-La clave es privada: no la compartas ni la subas al repositorio.
-
-## Estado actual
-- Dashboard web adaptable a móvil y escritorio.
-- Comprobación básica del estado del backend.
-- Búsqueda de equipos conectada al endpoint `/api/teams/search`.
-- Los módulos de jugadores, partidos y estimaciones están pendientes.
+Dashboard personal de análisis futbolístico con FastAPI y football-data.org API v4.
 
 ## Fuente de datos
-API-Football: https://www.api-football.com/documentation-v3
+- Proveedor principal: https://www.football-data.org/
+- Documentación: https://www.football-data.org/documentation/quickstart
+- Autenticación: variable de entorno `FOOTBALL_DATA_TOKEN`, enviada mediante `X-Auth-Token`.
+- Base URL: `https://api.football-data.org/v4`.
 
-La disponibilidad de estadísticas de jugadores, remates y tarjetas depende de la competición, temporada y cobertura del proveedor. La aplicación debe indicar cuando un dato no esté disponible, en vez de inventarlo.
+## Funcionalidades
+- Listado de competiciones disponibles en el plan gratuito.
+- Búsqueda de equipos dentro de una competición seleccionada.
+- Forma reciente: últimos 5, 10, 15 o 20 partidos disponibles.
+- Frecuencias históricas descriptivas de goles y ambos marcan.
+- Clasificaciones y máximos goleadores cuando el proveedor los ofrece.
+- Explicación de muestra, cálculos y limitaciones.
+
+## Variables de entorno en Render
+Configura:
+- `FOOTBALL_DATA_TOKEN`: token privado de tu cuenta football-data.org.
+
+No publiques el token en GitHub ni en el frontend.
+
+## Límites conocidos
+El plan gratuito tiene límite de 10 peticiones por minuto y acceso solo a las competiciones indicadas en la página oficial de cobertura. Los datos pueden tener retraso. Esta fuente no ofrece estadísticas avanzadas de remates, córners o tarjetas en el plan gratuito; esos mercados no se estiman ni se inventan.
+
+## Despliegue
+Render ejecuta:
+```bash
+pip install -r requirements.txt
+uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+```
+
+La aplicación muestra frecuencias observadas, no probabilidades futuras calibradas ni garantías de resultados.
+
+Datos proporcionados por football-data.org.
