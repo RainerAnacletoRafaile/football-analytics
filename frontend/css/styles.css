@@ -87,3 +87,8 @@
 .fixture-player-row:last-child{border-bottom:0}
 .data-footnote{font-size:9px;color:#8191a9;margin:13px 0 0}
 @media(max-width:600px){.match-row{grid-template-columns:1fr auto auto}.match-detail-button{grid-column:1/-1;width:100%}.event-row{grid-template-columns:28px 1fr 1fr}.event-row small{grid-column:2/-1}.fixture-scoreline{flex-wrap:wrap}.fixture-scoreline b{max-width:30%}.fixture-player-row{min-width:500px}.fixture-player-group{overflow-x:auto}}
+
+
+.competition-picker{width:100%;margin:0 0 14px;padding:12px;background:#101b2d;color:#eef4ff;border:1px solid #30425e;border-radius:8px;font:12px "DM Sans",sans-serif}
+.competition-tools{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.competition-tools button{padding:10px 14px;background:#24344c;color:#eaf0f8;border:1px solid #344967;border-radius:8px;cursor:pointer}
