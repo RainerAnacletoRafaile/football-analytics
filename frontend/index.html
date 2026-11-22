@@ -18,6 +18,7 @@
       <a class="nav-link active" href="#overview"><span>▦</span> Resumen</a>
       <a class="nav-link" href="#teams"><span>◉</span> Equipos</a>
       <a class="nav-link" href="#team-analysis"><span>▤</span> Informes</a>
+      <a class="nav-link" href="#matchup"><span>⚔</span> Duelo de equipos</a>
       <a class="nav-link" href="#teams"><span>⌕</span> Buscar equipos</a>
       <div class="sidebar-bottom">
         <div class="api-status"><span class="status-dot"></span><div><b>football-data.org</b><small id="api-status-text">Comprobando conexión...</small></div></div>
@@ -70,15 +71,30 @@
         <div id="analysis-content"></div>
       </section>
 
-      <section class="section-heading modules-heading">
-        <div><span class="section-kicker">03 / MÓDULOS</span><h2>Tu laboratorio futbolístico</h2><p>Datos reales, muestra visible y metodología transparente. Las métricas avanzadas solo aparecerán cuando el proveedor las entregue.</p></div>
+
+      <section class="section-heading matchup-heading" id="matchup">
+        <div><span class="section-kicker">03 / ANÁLISIS DE ENFRENTAMIENTO</span><h2>Duelo de equipos</h2><p>Compara dos clubes dentro de la competición elegida y consulta estimaciones explicables basadas en sus goles recientes.</p></div>
+      </section>
+      <section class="matchup-panel">
+        <div class="matchup-controls">
+          <label>COMPETICIÓN<select id="matchup-competition" class="competition-picker"></select></label>
+          <label>EQUIPO A · LOCAL<select id="matchup-home" disabled><option>Selecciona competición</option></select></label>
+          <label>EQUIPO B · VISITANTE<select id="matchup-away" disabled><option>Selecciona competición</option></select></label>
+          <label>MUESTRA<select id="matchup-sample"><option value="5">Últimos 5</option><option value="10" selected>Últimos 10</option><option value="15">Últimos 15</option><option value="20">Últimos 20</option></select></label>
+          <button id="run-matchup" type="button">Analizar enfrentamiento ↗</button>
+        </div>
+        <div id="matchup-feedback" class="feedback" role="status"></div>
+        <div id="matchup-result"></div>
+      </section>
+\n      <section class="section-heading modules-heading">
+        <div><span class="section-kicker">04 / MÓDULOS</span><h2>Tu laboratorio futbolístico</h2><p>Datos reales, muestra visible y metodología transparente. Las métricas avanzadas solo aparecerán cuando el proveedor las entregue.</p></div>
       </section>
 
       <section class="module-grid">
         <article class="module-card available"><div class="module-icon">◉</div><div class="module-tag">DISPONIBLE</div><h3>Análisis de equipos</h3><p>Busca clubes en competiciones incluidas en el plan gratuito.</p><a href="#teams">Explorar equipos <span>→</span></a></article>
         <article class="module-card"><div class="module-icon">♙</div><div class="module-tag muted-tag">SIGUIENTE ETAPA</div><h3>Goleadores de competición</h3><p>Consulta los máximos goleadores de la competición cuando estén disponibles.</p><span class="coming">En construcción</span></article>
         <article class="module-card"><div class="module-icon">◷</div><div class="module-tag muted-tag">SIGUIENTE ETAPA</div><h3>Partidos y tendencias</h3><p>Forma reciente, enfrentamientos y estadísticas por encuentro.</p><span class="coming">En construcción</span></article>
-        <article class="module-card"><div class="module-icon">⌁</div><div class="module-tag muted-tag">SIGUIENTE ETAPA</div><h3>Estimador estadístico</h3><p>Probabilidades orientativas, metodología explicable e incertidumbre.</p><span class="coming">En construcción</span></article>
+        <article class="module-card available"><div class="module-icon">⚔</div><div class="module-tag">DISPONIBLE</div><h3>Duelo de equipos</h3><p>Estimaciones de goles, resultado, ambos marcan y explicación del modelo.</p><a href="#matchup">Analizar partido <span>→</span></a></article>
       </section>
 
       <footer><span>FOOTBALL ANALYTICS</span><span>Las estadísticas describen tendencias; no garantizan resultados.</span></footer>
