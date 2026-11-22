@@ -53,9 +53,9 @@ async def search_teams(name: str = Query(min_length=3, description="Nombre del e
 async def team_leagues(team_id: int) -> dict:
     client = ApiFootballClient()
     try:
-        payload = await client.get("leagues", {"team": team_id, "current": "true"})
-        if not payload.get("response"):
-            payload = await client.get("leagues", {"team": team_id})
+        # Retrieve historical seasons too: the API-Football Free plan is limited
+        # to seasons 2022-2024 for this project.
+        payload = await client.get("leagues", {"team": team_id})
         return payload
     except ApiFootballError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
