@@ -17,8 +17,8 @@
       <div class="side-label">ESPACIO DE TRABAJO</div>
       <a class="nav-link active" href="#overview"><span>▦</span> Resumen</a>
       <a class="nav-link" href="#teams"><span>◉</span> Equipos</a>
-      <a class="nav-link disabled" href="#players"><span>♙</span> Jugadores <small>PRONTO</small></a>
-      <a class="nav-link disabled" href="#matches"><span>◷</span> Partidos <small>PRONTO</small></a>
+      <a class="nav-link" href="#team-analysis"><span>▤</span> Informes</a>
+      <a class="nav-link" href="#teams"><span>⌕</span> Buscar equipos</a>
       <div class="sidebar-bottom">
         <div class="api-status"><span class="status-dot"></span><div><b>football-data.org</b><small id="api-status-text">Comprobando conexión...</small></div></div>
         <div class="sidebar-note">Proyecto personal · Uso estadístico</div>
@@ -33,9 +33,9 @@
 
       <section class="welcome">
         <div>
-          <div class="eyebrow">CENTRO DE ANÁLISIS <span>•</span> TEMPORADA 2026</div>
+          <div class="eyebrow">CENTRO DE ANÁLISIS <span>•</span> DATOS VERIFICABLES</div>
           <h1>Los datos hablan.<br><em>Vamos a leerlos.</em></h1>
-          <p>Explora el rendimiento de equipos y jugadores con estadísticas recientes y datos verificables.</p>
+          <p>Analiza forma reciente, goles, rendimiento local y visitante, clasificación y tendencias construidas exclusivamente con resultados publicados por la API.</p>
         </div>
         <div class="hero-ball" aria-hidden="true">⚽</div>
       </section>
@@ -62,18 +62,13 @@
           <div><span class="section-kicker">02 / INFORME BASADO EN DATOS</span><h2 id="analysis-team-name">Análisis del equipo</h2><p id="analysis-subtitle">Selecciona una competición y temporada.</p></div>
           <button type="button" class="secondary-button" id="close-analysis">Cerrar</button>
         </div>
-        <div class="analysis-controls">
-          <label>COMPETICIÓN<select id="league-select"></select></label>
-          <label>TEMPORADA<select id="season-select"></select></label>
-          <label>MUESTRA<select id="sample-select"><option value="5">Últimos 5</option><option value="10" selected>Últimos 10</option><option value="15">Últimos 15</option><option value="20">Últimos 20</option></select></label>
-          <button id="run-analysis" type="button">Generar análisis ↗</button>
+        <div class="analysis-controls analysis-controls-simple">
+          <label>MUESTRA DE PARTIDOS<select id="sample-select"><option value="5">Últimos 5</option><option value="10" selected>Últimos 10</option><option value="15">Últimos 15</option><option value="20">Últimos 20</option></select></label>
+          <button id="run-analysis" type="button">Actualizar informe ↗</button>
         </div>
         <div id="analysis-feedback" class="feedback" role="status"></div>
         <div id="analysis-content"></div>
-        <section class="fixture-report" id="fixture-report" hidden>
-          <div class="analysis-section-head"><div><span class="section-kicker">07 / DESGLOSE DE PARTIDO</span><h3 id="fixture-report-title">Estadísticas del encuentro</h3><p>El proveedor gratuito ofrece resultados y calendario; no incluye estadísticas detalladas de remates o tarjetas.</p></div><button type="button" class="secondary-button" id="close-fixture">Cerrar detalle</button></div>
-          <div id="fixture-report-content"></div>
-        </section>
+      </section>
         <section class="player-report" id="player-report" hidden>
           <div class="analysis-section-head"><div><span class="section-kicker">06 / RENDIMIENTO INDIVIDUAL</span><h3>Estadísticas de jugadores</h3><p>Datos de temporada disponibles en la competición seleccionada.</p></div><button type="button" id="load-players">Cargar jugadores</button></div>
           <div class="player-toolbar"><input id="player-filter" type="search" placeholder="Filtrar por nombre de jugador..."><span id="player-count"></span></div>
@@ -83,7 +78,7 @@
       </section>
 
       <section class="section-heading modules-heading">
-        <div><span class="section-kicker">03 / MÓDULOS</span><h2>Tu laboratorio futbolístico</h2><p>Construiremos cada módulo paso a paso, usando datos reales.</p></div>
+        <div><span class="section-kicker">03 / MÓDULOS</span><h2>Tu laboratorio futbolístico</h2><p>Datos reales, muestra visible y metodología transparente. Las métricas avanzadas solo aparecerán cuando el proveedor las entregue.</p></div>
       </section>
 
       <section class="module-grid">
