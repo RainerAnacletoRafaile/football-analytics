@@ -3,7 +3,7 @@ let selectedTeam=null;
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const date=v=>v?new Date(v).toLocaleDateString("es-PE",{day:"2-digit",month:"short",year:"numeric",timeZone:"America/Lima"}):"—";
 async function api(url){const r=await fetch(url,{headers:{"Accept":"application/json"}});let p;try{p=await r.json();}catch{throw new Error("El servidor devolvió una respuesta que no es JSON.");}if(!r.ok)throw new Error(p.detail||"Error HTTP "+r.status);return p;}
-async function loadCompetitions(){try{const d=await api("/api/competitions");document.querySelector("#competition-code").innerHTML=(d.competitions||[]).map(c=>'<option value="'+esc(c.code)+'">'+esc(c.name)+' · '+esc(c.area?.name||"")+'</option>').join("");apiStatusText.textContent="football-data.org conectado · "+(d.competitions||[]).length+" competiciones";statusDot.style.background="#b8f36b";}catch(e){apiStatusText.textContent="Error de conexión";feedback.className="feedback error";feedback.textContent=e.message;}}
+async function loadCompetitions(){try{const d=await api("/api/competitions");document.querySelector("#competition-code").innerHTML=(d.competitions||[]).map(c=>'<option value="'+esc(c.code)+'">'+esc(c.name)+' · '+esc(c.area?.name||"")+'</option>').join("");apiStatusText.textContent="football-data.org conectado · "+(d.competitions||[]).length+" competiciones";statusDot.style.background="#b8f36b";const matchupCompetition=document.querySelector("#matchup-competition");if(matchupCompetition){matchupCompetition.innerHTML=document.querySelector("#competition-code").innerHTML;loadMatchupTeams();}}catch(e){apiStatusText.textContent="Error de conexión";feedback.className="feedback error";feedback.textContent=e.message;}}
 function makeCard(t,code){const c=document.createElement("article");c.className="team-card";const img=document.createElement("img");img.src=t.crest||"";img.onerror=()=>img.remove();const d=document.createElement("div");d.className="team-card-details";const b=document.createElement("b");b.textContent=t.name;const s=document.createElement("small");s.textContent=t.area?.name||t.shortName||"";const btn=document.createElement("button");btn.className="team-select-button";btn.textContent="Analizar equipo";btn.onclick=()=>openTeam(t,code);d.append(b,s,btn);c.append(img,d);return c;}
 form.addEventListener("submit",async e=>{e.preventDefault();const code=document.querySelector("#competition-code").value,name=input.value.trim();button.disabled=true;feedback.className="feedback";feedback.textContent="Buscando equipo...";results.replaceChildren();try{const d=await api("/api/teams/search?name="+encodeURIComponent(name)+"&competition="+code);const rows=d.response||[];feedback.textContent=rows.length?"Encontrados "+rows.length+" equipo(s).":"No encontramos ese equipo en esta competición.";rows.forEach(x=>results.append(makeCard(x.team,code)));}catch(x){feedback.className="feedback error";feedback.textContent=x.message;}finally{button.disabled=false;button.innerHTML='Buscar equipo <span>↗</span>'; }});
 async function openTeam(t,code){selectedTeam=t;analysisPanel.hidden=false;analysisPanel.scrollIntoView({behavior:"smooth",block:"start"});document.querySelector("#analysis-team-name").textContent=t.name;document.querySelector("#analysis-subtitle").textContent=(t.area?.name||"")+" · "+code+" · temporada actual";await runAnalysis(code);}
@@ -41,3 +41,41 @@ document.querySelector("#close-analysis").onclick=()=>analysisPanel.hidden=true;
 document.querySelector("#run-analysis").onclick=()=>runAnalysis(document.querySelector("#competition-code").value);
 document.querySelector("#sample-select").onchange=()=>runAnalysis(document.querySelector("#competition-code").value);
 loadCompetitions();
+
+
+/* Team-versus-team estimator */
+async function loadMatchupTeams(){
+ const code=document.querySelector("#matchup-competition").value;
+ const home=document.querySelector("#matchup-home"),away=document.querySelector("#matchup-away");
+ home.disabled=away.disabled=true;home.innerHTML=away.innerHTML='<option value="">Cargando equipos...</option>';
+ try{
+  const d=await api("/api/competitions/"+encodeURIComponent(code)+"/teams");
+  const teams=(d.teams||[]).slice().sort((a,b)=>(a.name||"").localeCompare(b.name||""));
+  const options='<option value="">Selecciona un equipo</option>'+teams.map(t=>'<option value="'+t.id+'">'+esc(t.name)+'</option>').join("");
+  home.innerHTML=options;away.innerHTML=options;home.disabled=away.disabled=false;
+ }catch(e){home.innerHTML=away.innerHTML='<option value="">No se pudieron cargar los equipos</option>';document.querySelector("#matchup-feedback").textContent=e.message;}
+}
+function renderMatchup(d){
+ const home=document.querySelector("#matchup-home"),away=document.querySelector("#matchup-away");
+ const homeName=home.selectedOptions[0]?.textContent||"Local",awayName=away.selectedOptions[0]?.textContent||"Visitante";
+ const top=d.markets.slice().sort((a,b)=>b.rate-a.rate);
+ const markets=top.map(m=>'<article class="market-card"><div class="market-card-top"><b>'+esc(m.label.replace(String(home.value),homeName).replace(String(away.value),awayName))+'</b><strong>'+m.rate+'%</strong></div><div class="trend-bar"><span style="width:'+Math.max(0,Math.min(100,m.rate))+'%"></span></div><p>'+esc(m.why)+'</p></article>').join("");
+ const scores=d.scorelines.map(s=>'<div class="scoreline-card"><b>'+esc(s.score)+'</b><small>'+s.rate+'%</small></div>').join("");
+ const sample=d.sample;
+ const notes='<div class="model-notes"><p><b>¿Por qué estima esto?</b> El modelo combina el promedio de goles marcados y recibidos de cada equipo, dando prioridad a sus partidos como local y visitante. Después aplica una distribución de Poisson para estimar marcadores y mercados de goles.</p><ul><li>'+esc(homeName)+': '+d.reasons[0].attack_avg+' goles a favor y '+d.reasons[0].defence_conceded_avg+' recibidos por partido; muestra de sede: '+sample.home_at_venue+'.</li><li>'+esc(awayName)+': '+d.reasons[1].attack_avg+' goles a favor y '+d.reasons[1].defence_conceded_avg+' recibidos por partido; muestra de sede: '+sample.away_at_venue+'.</li><li>Partidos analizados: '+sample.home_total+' del local y '+sample.away_total+' del visitante, dentro de los últimos 365 días.</li></ul><p><b>Importante:</b> son estimaciones orientativas, no garantías. No incorpora alineaciones, lesiones ni descanso. La cobertura gratuita no aporta remates, córners, tarjetas ni posesión.</p></div>';
+ document.querySelector("#matchup-result").innerHTML=
+ '<div class="matchup-summary"><div><h3>'+esc(homeName)+' <span style="color:var(--green)">vs</span> '+esc(awayName)+'</h3><p>'+esc(d.competition)+' · Estimación estadística, no pronóstico seguro</p></div><div class="expected-goals"><div><strong>'+d.expected_goals.home+'</strong><small>Goles local</small></div><div><strong>'+d.expected_goals.away+'</strong><small>Goles visitante</small></div></div></div>'+
+ '<div class="analysis-section-head"><div><span class="section-kicker">01 / MERCADOS ESTIMADOS</span><h3>Tendencias con mayor estimación</h3><p>Ordenadas de mayor a menor porcentaje calculado.</p></div></div><div class="market-grid">'+markets+'</div>'+
+ '<div class="analysis-section-head"><div><span class="section-kicker">02 / MARCADORES</span><h3>Marcadores más estimados</h3></div></div><div class="scoreline-grid">'+scores+'</div>'+notes;
+}
+document.querySelector("#matchup-competition").addEventListener("change",loadMatchupTeams);
+document.querySelector("#run-matchup").addEventListener("click",async()=>{
+ const home=document.querySelector("#matchup-home").value,away=document.querySelector("#matchup-away").value,code=document.querySelector("#matchup-competition").value,last=document.querySelector("#matchup-sample").value;
+ const feedback=document.querySelector("#matchup-feedback"),result=document.querySelector("#matchup-result"),btn=document.querySelector("#run-matchup");
+ if(!home||!away){feedback.className="feedback error";feedback.textContent="Selecciona los dos equipos antes de analizar.";return;}
+ if(home===away){feedback.className="feedback error";feedback.textContent="Elige dos equipos diferentes.";return;}
+ btn.disabled=true;feedback.className="feedback";feedback.textContent="Analizando forma reciente, goles y contexto de sede...";result.replaceChildren();
+ try{const d=await api("/api/matchup?home_team_id="+home+"&away_team_id="+away+"&competition="+encodeURIComponent(code)+"&last="+last);renderMatchup(d);feedback.textContent="Análisis generado con datos de "+d.sample.home_total+" y "+d.sample.away_total+" partidos. Fuente: football-data.org.";}
+ catch(e){feedback.className="feedback error";feedback.textContent=e.message;}
+ finally{btn.disabled=false;}
+});
