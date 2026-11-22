@@ -98,3 +98,12 @@ async def team_players(
         return await client.get("players", params)
     except ApiFootballError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.get("/api/fixtures/{fixture_id}/report", tags=["Partidos"])
+async def fixture_report(fixture_id: int) -> dict:
+    client = ApiFootballClient()
+    try:
+        return await client.get("fixtures", {"id": fixture_id, "timezone": "America/Lima"})
+    except ApiFootballError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
