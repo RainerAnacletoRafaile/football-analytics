@@ -105,3 +105,14 @@
 .bucket-row{display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center;font-size:10px;color:#aab8cb}
 .bucket-row b{color:#eef3fb}.bucket-row .trend-bar{grid-column:1/-1;margin:0;height:5px}
 @media(max-width:600px){.bucket-card{grid-template-columns:1fr}.goal-chart{min-height:170px}.goal-stack{height:105px}}
+
+/* Data quality, competition context and responsive polish */
+.analysis-controls-simple{grid-template-columns:minmax(180px,260px) auto;justify-content:start}
+.data-quality{display:flex;flex-wrap:wrap;align-items:center;gap:8px 13px;padding:13px 15px;margin:16px 0 20px;background:#17263a;border:1px solid #344967;border-left:3px solid var(--green);border-radius:9px}
+.data-quality b{font-size:11px;color:var(--green)}
+.data-quality span{font-size:10px;color:#b8c5d7}
+.data-quality p{flex-basis:100%;font-size:10px;line-height:1.5;color:#9eacc1;margin:0}
+.league-context-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.league-context-grid .stat-card strong{font-size:21px}
+.goal-chart:after{content:"";display:block}
+@media(max-width:600px){.analysis-controls-simple{grid-template-columns:1fr}.analysis-controls-simple button{width:100%}.league-context-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.data-quality{align-items:flex-start;flex-direction:column;gap:5px}}
