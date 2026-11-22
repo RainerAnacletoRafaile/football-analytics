@@ -57,13 +57,28 @@
         <div id="team-results" class="team-results"></div>
       </section>
 
+      <section class="analysis-panel" id="team-analysis" hidden>
+        <div class="analysis-title">
+          <div><span class="section-kicker">02 / INFORME BASADO EN DATOS</span><h2 id="analysis-team-name">Análisis del equipo</h2><p id="analysis-subtitle">Selecciona una competición y temporada.</p></div>
+          <button type="button" class="secondary-button" id="close-analysis">Cerrar</button>
+        </div>
+        <div class="analysis-controls">
+          <label>COMPETICIÓN<select id="league-select"></select></label>
+          <label>TEMPORADA<select id="season-select"></select></label>
+          <label>MUESTRA<select id="sample-select"><option value="5">Últimos 5</option><option value="10" selected>Últimos 10</option><option value="15">Últimos 15</option><option value="20">Últimos 20</option></select></label>
+          <button id="run-analysis" type="button">Generar análisis ↗</button>
+        </div>
+        <div id="analysis-feedback" class="feedback" role="status"></div>
+        <div id="analysis-content"></div>
+      </section>
+
       <section class="section-heading modules-heading">
-        <div><span class="section-kicker">02 / MÓDULOS</span><h2>Tu laboratorio futbolístico</h2><p>Construiremos cada módulo paso a paso, usando datos reales.</p></div>
+        <div><span class="section-kicker">03 / MÓDULOS</span><h2>Tu laboratorio futbolístico</h2><p>Construiremos cada módulo paso a paso, usando datos reales.</p></div>
       </section>
 
       <section class="module-grid">
         <article class="module-card available"><div class="module-icon">◉</div><div class="module-tag">DISPONIBLE</div><h3>Análisis de equipos</h3><p>Busca clubes y consulta la información que ofrece el proveedor de datos.</p><a href="#teams">Explorar equipos <span>→</span></a></article>
-        <article class="module-card"><div class="module-icon">♙</div><div class="module-tag muted-tag">SIGUIENTE ETAPA</div><h3>Rendimiento de jugadores</h3><p>Goles, remates, minutos, tarjetas y evolución reciente según cobertura.</p><span class="coming">En construcción</span></article>
+        <article class="module-card"><div class="module-icon">♙</div><div class="module-tag muted-tag">SIGUIENTE ETAPA</div><h3>Rendimiento de jugadores</h3><p>Minutos, titularidades, goles, asistencias, remates, tarjetas y rating.</p><span class="coming">En construcción</span></article>
         <article class="module-card"><div class="module-icon">◷</div><div class="module-tag muted-tag">SIGUIENTE ETAPA</div><h3>Partidos y tendencias</h3><p>Forma reciente, enfrentamientos y estadísticas por encuentro.</p><span class="coming">En construcción</span></article>
         <article class="module-card"><div class="module-icon">⌁</div><div class="module-tag muted-tag">SIGUIENTE ETAPA</div><h3>Estimador estadístico</h3><p>Probabilidades orientativas, metodología explicable e incertidumbre.</p><span class="coming">En construcción</span></article>
       </section>
