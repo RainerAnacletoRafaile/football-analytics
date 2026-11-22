@@ -20,7 +20,7 @@
       <a class="nav-link disabled" href="#players"><span>♙</span> Jugadores <small>PRONTO</small></a>
       <a class="nav-link disabled" href="#matches"><span>◷</span> Partidos <small>PRONTO</small></a>
       <div class="sidebar-bottom">
-        <div class="api-status"><span class="status-dot"></span><div><b>API-Football</b><small id="api-status-text">Comprobando conexión...</small></div></div>
+        <div class="api-status"><span class="status-dot"></span><div><b>football-data.org</b><small id="api-status-text">Comprobando conexión...</small></div></div>
         <div class="sidebar-note">Proyecto personal · Uso estadístico</div>
       </div>
     </aside>
@@ -41,12 +41,12 @@
       </section>
 
       <section class="section-heading" id="teams">
-        <div><span class="section-kicker">01 / EXPLORACIÓN</span><h2>Encuentra un equipo</h2><p>Busca un club para consultar su información disponible en API-Football.</p></div>
+        <div><span class="section-kicker">01 / EXPLORACIÓN</span><h2>Encuentra un equipo</h2><p>Selecciona una competición gratuita y busca un equipo de su temporada actual.</p></div>
       </section>
 
       <section class="search-panel">
         <form id="team-search-form">
-          <label for="team-name">NOMBRE DEL EQUIPO</label>
+          <label for="competition-code">COMPETICIÓN</label><select id="competition-code" class="competition-picker"></select><label for="team-name">NOMBRE DEL EQUIPO</label>
           <div class="search-row">
             <div class="search-input-wrap"><span>⌕</span><input id="team-name" name="name" minlength="3" placeholder="Ej. FC Barcelona, Real Madrid, Arsenal..." autocomplete="off" required></div>
             <button type="submit" id="search-button">Buscar equipo <span>↗</span></button>
@@ -71,7 +71,7 @@
         <div id="analysis-feedback" class="feedback" role="status"></div>
         <div id="analysis-content"></div>
         <section class="fixture-report" id="fixture-report" hidden>
-          <div class="analysis-section-head"><div><span class="section-kicker">07 / DESGLOSE DE PARTIDO</span><h3 id="fixture-report-title">Estadísticas del encuentro</h3><p>Estadísticas detalladas, incidencias y jugadores cuando la competición las ofrece.</p></div><button type="button" class="secondary-button" id="close-fixture">Cerrar detalle</button></div>
+          <div class="analysis-section-head"><div><span class="section-kicker">07 / DESGLOSE DE PARTIDO</span><h3 id="fixture-report-title">Estadísticas del encuentro</h3><p>El proveedor gratuito ofrece resultados y calendario; no incluye estadísticas detalladas de remates o tarjetas.</p></div><button type="button" class="secondary-button" id="close-fixture">Cerrar detalle</button></div>
           <div id="fixture-report-content"></div>
         </section>
         <section class="player-report" id="player-report" hidden>
@@ -87,8 +87,8 @@
       </section>
 
       <section class="module-grid">
-        <article class="module-card available"><div class="module-icon">◉</div><div class="module-tag">DISPONIBLE</div><h3>Análisis de equipos</h3><p>Busca clubes y consulta la información que ofrece el proveedor de datos.</p><a href="#teams">Explorar equipos <span>→</span></a></article>
-        <article class="module-card"><div class="module-icon">♙</div><div class="module-tag muted-tag">SIGUIENTE ETAPA</div><h3>Rendimiento de jugadores</h3><p>Minutos, titularidades, goles, asistencias, remates, tarjetas y rating.</p><span class="coming">En construcción</span></article>
+        <article class="module-card available"><div class="module-icon">◉</div><div class="module-tag">DISPONIBLE</div><h3>Análisis de equipos</h3><p>Busca clubes en competiciones incluidas en el plan gratuito.</p><a href="#teams">Explorar equipos <span>→</span></a></article>
+        <article class="module-card"><div class="module-icon">♙</div><div class="module-tag muted-tag">SIGUIENTE ETAPA</div><h3>Goleadores de competición</h3><p>Consulta los máximos goleadores de la competición cuando estén disponibles.</p><span class="coming">En construcción</span></article>
         <article class="module-card"><div class="module-icon">◷</div><div class="module-tag muted-tag">SIGUIENTE ETAPA</div><h3>Partidos y tendencias</h3><p>Forma reciente, enfrentamientos y estadísticas por encuentro.</p><span class="coming">En construcción</span></article>
         <article class="module-card"><div class="module-icon">⌁</div><div class="module-tag muted-tag">SIGUIENTE ETAPA</div><h3>Estimador estadístico</h3><p>Probabilidades orientativas, metodología explicable e incertidumbre.</p><span class="coming">En construcción</span></article>
       </section>
