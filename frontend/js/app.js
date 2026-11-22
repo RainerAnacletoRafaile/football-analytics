@@ -155,6 +155,7 @@ function renderMatches(matches) {
     <div><b>${esc(match.opponent)}</b><small>${esc(date(match.date))} · ${esc(match.venue)}</small></div>
     <strong class="result-${match.result.toLowerCase()}">${esc(match.score)}</strong>
     <span class="result-pill result-${match.result.toLowerCase()}">${match.result==="W"?"Victoria":match.result==="D"?"Empate":"Derrota"}</span>
+    <button class="match-detail-button" type="button" data-fixture="${esc(match.fixture_id)}" data-opponent="${esc(match.opponent)}">Ver datos</button>
   </div>`).join("")}</div>`;
 }
 function renderAnalysis(data) {
@@ -278,3 +279,45 @@ function renderPlayers() {
 }
 document.querySelector("#load-players").addEventListener("click",()=>loadPlayers(1));
 document.querySelector("#player-filter").addEventListener("input",renderPlayers);
+
+
+async function openFixtureReport(fixtureId, opponent) {
+  const panel=document.querySelector("#fixture-report");
+  const content=document.querySelector("#fixture-report-content");
+  panel.hidden=false;
+  panel.scrollIntoView({behavior:"smooth",block:"start"});
+  document.querySelector("#fixture-report-title").textContent=`Informe: ${opponent}`;
+  content.innerHTML='<p class="empty-note">Consultando datos completos del encuentro...</p>';
+  try {
+    const payload=await api(`/api/fixtures/${fixtureId}/report`);
+    const match=(payload.response||[])[0];
+    if(!match) throw new Error("El proveedor no devolvió información para este encuentro.");
+    const stats=match.statistics||[];
+    const teamNames=stats.map(x=>x.team?.name||"Equipo");
+    const types=new Map();
+    stats.forEach(group=>(group.statistics||[]).forEach(stat=>types.set(stat.type,true)));
+    const statRows=[...types.keys()].map(type=>{
+      const values=stats.map(group=>(group.statistics||[]).find(s=>s.type===type)?.value);
+      return `<tr><th>${esc(type)}</th><td>${esc(values[0]??"—")}</td><td>${esc(values[1]??"—")}</td></tr>`;
+    }).join("");
+    const events=match.events||[];
+    const eventHtml=events.length?events.map(event=>`<div class="event-row"><b>${esc(event.time?.elapsed??"—")}′</b><span>${esc(event.team?.name||"")}</span><span>${esc(event.player?.name||"")}</span><small>${esc(event.type||"")} · ${esc(event.detail||"")}</small></div>`).join(""):'<p class="empty-note">No hay incidencias disponibles.</p>';
+    const playerGroups=match.players||[];
+    const playerHtml=playerGroups.map(group=>`<div class="fixture-player-group"><h4>${esc(group.team?.name||"Plantilla")}</h4>${(group.players||[]).map(entry=>{const p=entry.player||{},st=entry.statistics?.[0]||{},g=st.games||{},sh=st.shots||{},go=st.goals||{};return `<div class="fixture-player-row"><b>${esc(p.name||"Jugador")}</b><span>${esc(g.position||"—")}</span><span>${number(g.minutes)} min</span><span>${number(go.total)} G</span><span>${number(sh.total)} rem.</span><span>${number(sh.on)} a puerta</span></div>`}).join("")}</div>`).join("");
+    content.innerHTML=`
+      <div class="fixture-scoreline"><b>${esc(match.teams?.home?.name||"Local")}</b><strong>${esc(match.goals?.home??"—")} - ${esc(match.goals?.away??"—")}</strong><b>${esc(match.teams?.away?.name||"Visitante")}</b></div>
+      <div class="analysis-section-head"><div><span class="section-kicker">ESTADÍSTICAS COLECTIVAS</span><h3>Comparativa del partido</h3></div></div>
+      ${statRows?`<div class="table-scroll"><table class="players-table"><thead><tr><th>Indicador</th><th>${esc(teamNames[0]||"Local")}</th><th>${esc(teamNames[1]||"Visitante")}</th></tr></thead><tbody>${statRows}</tbody></table></div>`:'<p class="empty-note">La competición no ofrece estadísticas colectivas para este partido.</p>'}
+      <div class="analysis-section-head"><div><span class="section-kicker">INCIDENCIAS</span><h3>Eventos del encuentro</h3></div></div><div class="event-list">${eventHtml}</div>
+      <div class="analysis-section-head"><div><span class="section-kicker">RENDIMIENTO INDIVIDUAL</span><h3>Jugadores del encuentro</h3></div></div>
+      ${playerHtml||'<p class="empty-note">No hay estadísticas individuales disponibles para este encuentro.</p>'}
+      <p class="data-footnote">Fuente: API-Football. Los campos no suministrados por la competición no se estiman ni se sustituyen.</p>`;
+  } catch(error) {
+    content.innerHTML=`<p class="feedback error">${esc(error.message)}</p>`;
+  }
+}
+document.querySelector("#analysis-content").addEventListener("click",event=>{
+  const target=event.target.closest("[data-fixture]");
+  if(target) openFixtureReport(target.dataset.fixture,target.dataset.opponent);
+});
+document.querySelector("#close-fixture").addEventListener("click",()=>document.querySelector("#fixture-report").hidden=true);
