@@ -224,3 +224,57 @@ async function runAnalysis() {
 }
 
 checkBackend();
+
+
+let playerRows = [];
+let playerPage = 1;
+let playerTotalPages = 1;
+async function loadPlayers(page = 1) {
+  if (!selectedTeam?.id) return;
+  const league = document.querySelector("#league-select").value;
+  const season = document.querySelector("#season-select").value;
+  const feedback = document.querySelector("#players-feedback");
+  const wrap = document.querySelector("#players-table-wrap");
+  const filter = document.querySelector("#player-filter").value.trim();
+  feedback.className = "feedback";
+  feedback.textContent = "Consultando estadísticas individuales...";
+  wrap.replaceChildren();
+  document.querySelector("#player-report").hidden = false;
+  try {
+    const query = new URLSearchParams({league_id:league,season,page:String(page)});
+    if (filter.length >= 3) query.set("search",filter);
+    const payload = await api(`/api/teams/${selectedTeam.id}/players?${query}`);
+    playerRows = payload.response || [];
+    playerPage = payload.paging?.current || page;
+    playerTotalPages = payload.paging?.total || 1;
+    renderPlayers();
+    feedback.textContent = playerRows.length
+      ? `Página ${playerPage} de ${playerTotalPages}. Datos proporcionados por API-Football.`
+      : "No hay estadísticas individuales disponibles para esta combinación de equipo, competición y temporada.";
+  } catch (error) {
+    feedback.className = "feedback error";
+    feedback.textContent = error.message;
+  }
+}
+function renderPlayers() {
+  const filter = document.querySelector("#player-filter").value.trim().toLowerCase();
+  const rows = playerRows.filter(row => (row.player?.name || "").toLowerCase().includes(filter));
+  document.querySelector("#player-count").textContent = `${rows.length} jugador(es) en esta página`;
+  const wrap = document.querySelector("#players-table-wrap");
+  if (!rows.length) {
+    wrap.innerHTML = '<p class="empty-note">No hay jugadores que coincidan con el filtro.</p>';
+    return;
+  }
+  wrap.innerHTML = `<div class="table-scroll"><table class="players-table">
+    <thead><tr><th>Jugador</th><th>Pos.</th><th>Part.</th><th>Min.</th><th>Goles</th><th>Asist.</th><th>Remates</th><th>A puerta</th><th>Pases %</th><th>Rating</th><th>Amar.</th><th>Rojas</th></tr></thead>
+    <tbody>${rows.map(row=>{
+      const p=row.player||{}, s=row.statistics?.[0]||{}, g=s.games||{}, sh=s.shots||{}, goals=s.goals||{}, passes=s.passes||{}, cards=s.cards||{};
+      return `<tr><td><div class="player-name"><img src="${esc(p.photo||"")}" alt="" loading="lazy" onerror="this.style.display='none'"><span><b>${esc(p.name||"Sin nombre")}</b><small>#${esc(p.number??"—")}</small></span></div></td>
+      <td>${esc(g.position||"—")}</td><td>${number(g.appearences)}</td><td>${number(g.minutes)}</td><td>${number(goals.total)}</td><td>${number(goals.assists)}</td><td>${number(sh.total)}</td><td>${number(sh.on)}</td><td>${number(passes.accuracy,"%")}</td><td>${number(g.rating)}</td><td>${number(cards.yellow)}</td><td>${number(cards.red)}</td></tr>`;
+    }).join("")}</tbody></table></div>
+    <div class="pagination"><button type="button" id="players-prev" ${playerPage<=1?"disabled":""}>Anterior</button><span>Página ${playerPage} / ${playerTotalPages}</span><button type="button" id="players-next" ${playerPage>=playerTotalPages?"disabled":""}>Siguiente</button></div>`;
+  document.querySelector("#players-prev")?.addEventListener("click",()=>loadPlayers(playerPage-1));
+  document.querySelector("#players-next")?.addEventListener("click",()=>loadPlayers(playerPage+1));
+}
+document.querySelector("#load-players").addEventListener("click",()=>loadPlayers(1));
+document.querySelector("#player-filter").addEventListener("input",renderPlayers);
