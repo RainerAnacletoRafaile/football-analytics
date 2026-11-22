@@ -25,7 +25,9 @@ function renderAnalysis(d,code){
  const dataQuality='<div class="data-quality"><b>'+esc(quality.sample_label||"Muestra")+'</b><span>'+d.sample_size+' partidos finalizados válidos · '+esc(period)+'</span><p>'+esc(quality.warning||"Frecuencias descriptivas basadas en los resultados disponibles.")+'</p></div>';
  const matches=r.matches.map(m=>'<div class="match-row"><div><b>'+esc(m.opponent)+'</b><small>'+date(m.date)+' · '+esc(m.venue)+'</small></div><strong>'+esc(m.score)+'</strong><span class="result-pill result-'+(m.result==="W"?"w":m.result==="D"?"d":"l")+'">'+(m.result==="W"?"Victoria":m.result==="D"?"Empate":"Derrota")+'</span></div>').join("");
  analysisContent.innerHTML=
+ dataQuality+
  '<div class="analysis-section-head"><div><span class="section-kicker">01 / INDICADORES GENERALES</span><h3>Radiografía del equipo</h3></div><span class="sample-chip">'+d.sample_size+' partidos válidos</span></div><div class="stats-grid">'+stats+'</div>'+
+ '<div class="analysis-section-head"><div><span class="section-kicker">02 / CONTEXTO DE COMPETICIÓN</span><h3>Cómo está en la liga</h3><p>Clasificación oficial de la API, cuando está disponible.</p></div></div>'+leagueHtml+
  '<div class="analysis-section-head"><div><span class="section-kicker">03 / TENDENCIAS DE GOLES</span><h3>Frecuencias por mercado</h3><p>Porcentaje observado en la muestra, no probabilidad futura.</p></div></div><div class="trend-grid">'+trends+'</div>'+
  '<div class="analysis-section-head"><div><span class="section-kicker">04 / LOCAL Y VISITANTE</span><h3>Rendimiento según sede</h3></div></div><div class="split-grid">'+venue("Como local",r.home)+venue("Como visitante",r.away)+'</div>'+
  '<div class="analysis-section-head"><div><span class="section-kicker">05 / VISUALIZACIÓN</span><h3>Goles por partido</h3><p>Verde: goles a favor · azul: goles recibidos.</p></div></div><div class="goal-chart">'+(goalChart||'<p class="empty-note">Sin datos para graficar.</p>')+'</div>'+
