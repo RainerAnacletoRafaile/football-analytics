@@ -2,6 +2,7 @@ from datetime import date, timedelta, datetime
 from zoneinfo import ZoneInfo
 from pathlib import Path
 from time import monotonic
+import asyncio
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -13,13 +14,26 @@ FRONTEND_DIR=Path(__file__).resolve().parents[2]/"frontend"
 app=FastAPI(title=settings.app_name,description="Football Analytics con datos de football-data.org.",version="1.0.0")
 app.mount("/static",StaticFiles(directory=FRONTEND_DIR),name="static")
 _cache={}
+_cache_locks={}
 async def cached(key,endpoint,params=None,ttl=900):
     now=monotonic()
     hit=_cache.get(key)
-    if hit and now-hit[0]<ttl:return hit[1]
-    value=await FootballDataClient().get(endpoint,params)
-    _cache[key]=(now,value)
-    return value
+    if hit and now-hit[0]<ttl:
+        return hit[1]
+    lock=_cache_locks.setdefault(key,asyncio.Lock())
+    async with lock:
+        now=monotonic()
+        hit=_cache.get(key)
+        if hit and now-hit[0]<ttl:
+            return hit[1]
+        value=await FootballDataClient().get(endpoint,params)
+        _cache[key]=(monotonic(),value)
+        if len(_cache)>512:
+            expired=sorted(_cache.items(),key=lambda item:item[1][0])[:len(_cache)-512]
+            for old_key,_ in expired:
+                _cache.pop(old_key,None)
+                _cache_locks.pop(old_key,None)
+        return value
 def fail(exc):
     raise HTTPException(status_code=503,detail=str(exc)) from exc
 
