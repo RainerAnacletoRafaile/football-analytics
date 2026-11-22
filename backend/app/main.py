@@ -80,3 +80,21 @@ async def team_analysis(
         return build_team_analysis(team_id, league_id, season, season_stats.get("response") or {}, fixtures, last)
     except ApiFootballError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.get("/api/teams/{team_id}/players", tags=["Jugadores"])
+async def team_players(
+    team_id: int,
+    league_id: int = Query(gt=0),
+    season: int = Query(ge=2000, le=2100),
+    search: str | None = Query(default=None, min_length=3),
+    page: int = Query(default=1, ge=1, le=50),
+) -> dict:
+    client = ApiFootballClient()
+    params = {"team": team_id, "league": league_id, "season": season, "page": page}
+    if search:
+        params["search"] = search
+    try:
+        return await client.get("players", params)
+    except ApiFootballError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
