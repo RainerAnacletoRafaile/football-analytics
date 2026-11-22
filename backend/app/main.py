@@ -2,6 +2,7 @@ from datetime import date, timedelta, datetime
 from zoneinfo import ZoneInfo
 from pathlib import Path
 from time import monotonic
+from math import exp, factorial
 import asyncio
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
@@ -144,6 +145,79 @@ async def team_analysis(team_id:int,competition:str=Query(min_length=2),last:int
         except (FootballDataError,AttributeError,TypeError,ValueError):
             league_context=None
         return {"team_id":team_id,"competition":code,"source":"football-data.org","generated_at":datetime.now(ZoneInfo("America/Lima")).isoformat(),"period":{"from":start.isoformat(),"to":end.isoformat()},"sample_size":n,"requested_sample":last,"data_quality":{"valid_finished_matches":n,"discarded_or_unfinished_matches":len(raw)-len(matches),"sample_label":"Muestra reducida" if n<5 else "Muestra moderada" if n<10 else "Muestra amplia" if n>=15 else "Muestra estándar","warning":"La muestra es pequeña; evita sacar conclusiones fuertes." if n<5 else ("Los porcentajes describen estos partidos, no garantizan el siguiente resultado." if n<15 else "La muestra es descriptiva y no constituye una predicción.")},"league_context":league_context,"recent":{"matches":rows,"record":{"wins":wins,"draws":draws,"losses":losses,"points":points,"points_per_game":round(points/n,2) if n else None,"win_rate":pct(wins),"draw_rate":pct(draws),"loss_rate":pct(losses)},"goals_for":gf,"goals_against":ga,"goal_difference":gf-ga,"avg_total_goals":round((gf+ga)/n,2) if n else None,"avg_goals_for":round(gf/n,2) if n else None,"avg_goals_against":round(ga/n,2) if n else None,"btts_rate":pct(both),"scored_rate":pct(scored),"conceded_rate":pct(conceded),"clean_sheet_rate":pct(clean),"home":split([x for x in rows if x["venue"]=="Local"]),"away":split([x for x in rows if x["venue"]=="Visitante"]),"goal_buckets":buckets,"current_streak":streak,"goals_by_match":[{"opponent":x["opponent"],"date":x["date"],"for":x["goals_for"],"against":x["goals_against"],"total":x["total_goals"],"result":x["result"]} for x in reversed(rows)]},"trends":trends,"methodology":{"sample":"Últimos "+str(last)+" partidos finalizados en los últimos 365 días; se excluyen partidos sin marcador final válido.","frequency":"Frecuencia observada = aciertos / partidos válidos × 100.","uncertainty":"No es una probabilidad predictiva ni una recomendación de apuesta.","limitations":["Se utilizan únicamente campos que entrega football-data.org en el plan contratado.","No se generan remates, tiros a puerta, córners, posesión o tarjetas si el proveedor no los entrega en esta cobertura.","Los marcadores y calendarios pueden tener retraso según el plan.","La tabla de liga puede no estar disponible para algunas competiciones o fases.","No se ajusta por lesiones, alineaciones, descanso ni fuerza del rival."]}}
+    except FootballDataError as e:
+        fail(e)
+
+
+
+def poisson_prob(lam, goals):
+    return exp(-lam) * (lam ** goals) / factorial(goals)
+
+def summarize_match_rows(raw, team_id, venue=None, limit=10):
+    rows=[]
+    for m in raw if isinstance(raw,list) else []:
+        if not isinstance(m,dict) or m.get("status")!="FINISHED":
+            continue
+        score=(m.get("score") or {}).get("fullTime") or {}
+        hs,aws=score.get("home"),score.get("away")
+        home=m.get("homeTeam") or {}; away=m.get("awayTeam") or {}
+        if not isinstance(hs,int) or not isinstance(aws,int):
+            continue
+        if home.get("id")!=team_id and away.get("id")!=team_id:
+            continue
+        is_home=home.get("id")==team_id
+        if venue=="home" and not is_home: continue
+        if venue=="away" and is_home: continue
+        rows.append({"gf":hs if is_home else aws,"ga":aws if is_home else hs,"total":hs+aws})
+    return rows[:limit]
+
+@app.get("/api/matchup")
+async def matchup(home_team_id:int=Query(gt=0),away_team_id:int=Query(gt=0),competition:str=Query(min_length=2),last:int=Query(default=10,ge=5,le=20)):
+    if home_team_id==away_team_id:
+        raise HTTPException(status_code=400,detail="Selecciona dos equipos diferentes.")
+    code=competition.upper()
+    end=datetime.now(ZoneInfo("America/Lima")).date()
+    start=end-timedelta(days=365)
+    params={"dateFrom":start.isoformat(),"dateTo":end.isoformat(),"competitions":code,"limit":500}
+    try:
+        async def team_matches(team_id):
+            d=await cached("team-matches:"+str(team_id)+":"+code,"teams/"+str(team_id)+"/matches",params,ttl=600)
+            return summarize_match_rows(d.get("matches"),team_id,None,last), summarize_match_rows(d.get("matches"),team_id,"home",last), summarize_match_rows(d.get("matches"),team_id,"away",last)
+        (home_all,home_home,home_away),(away_all,away_home,away_away)=await asyncio.gather(team_matches(home_team_id),team_matches(away_team_id))
+        if not home_all or not away_all:
+            raise HTTPException(status_code=422,detail="No hay suficientes partidos finalizados para uno o ambos equipos en esta competición.")
+        avg=lambda rows,key:sum(x[key] for x in rows)/len(rows) if rows else None
+        # El cálculo prioriza la sede del partido; si no hay muestra suficiente, usa el promedio general.
+        h_attack=avg(home_home,"gf") if len(home_home)>=2 else avg(home_all,"gf")
+        h_defence=avg(home_home,"ga") if len(home_home)>=2 else avg(home_all,"ga")
+        a_attack=avg(away_away,"gf") if len(away_away)>=2 else avg(away_all,"gf")
+        a_defence=avg(away_away,"ga") if len(away_away)>=2 else avg(away_all,"ga")
+        lam_home=max(.05,(h_attack+a_defence)/2)
+        lam_away=max(.05,(a_attack+h_defence)/2)
+        ph=[poisson_prob(lam_home,i) for i in range(11)]
+        pa=[poisson_prob(lam_away,i) for i in range(11)]
+        home_win=draw=away_win=over15=over25=over35=btts=0
+        for i,p1 in enumerate(ph):
+            for j,p2 in enumerate(pa):
+                p=p1*p2
+                if i>j:home_win+=p
+                elif i==j:draw+=p
+                else:away_win+=p
+                if i+j>=2:over15+=p
+                if i+j>=3:over25+=p
+                if i+j>=4:over35+=p
+                if i>0 and j>0:btts+=p
+        def pct(v):return round(v*100,1)
+        markets=[
+          {"label":"Gana "+str(home_team_id),"rate":pct(home_win),"why":"Proyección de goles local "+str(round(lam_home,2))+" frente a "+str(round(lam_away,2))+" visitante."},
+          {"label":"Empate","rate":pct(draw),"why":"Probabilidad del mismo número de goles según el modelo Poisson."},
+          {"label":"Gana "+str(away_team_id),"rate":pct(away_win),"why":"Proyección de goles visitante "+str(round(lam_away,2))+" frente a "+str(round(lam_home,2))+" local."},
+          {"label":"Más de 1.5 goles","rate":pct(over15),"why":"Distribución estimada de goles totales."},
+          {"label":"Más de 2.5 goles","rate":pct(over25),"why":"Distribución estimada de goles totales."},
+          {"label":"Más de 3.5 goles","rate":pct(over35),"why":"Distribución estimada de goles totales."},
+          {"label":"Ambos equipos marcan","rate":pct(btts),"why":"Se estima que ambos equipos anoten al menos un gol."}
+        ]
+        return {"competition":code,"source":"football-data.org","model":"Poisson independiente con medias de ataque/defensa recientes","sample":{"home_total":len(home_all),"home_at_venue":len(home_home),"away_total":len(away_all),"away_at_venue":len(away_away),"days":365,"last_requested":last},"expected_goals":{"home":round(lam_home,2),"away":round(lam_away,2)},"markets":markets,"scorelines":sorted([{"score":str(i)+"-"+str(j),"rate":pct(ph[i]*pa[j])} for i in range(6) for j in range(6)],key=lambda x:x["rate"],reverse=True)[:5],"reasons":[{"team":"Local","attack_avg":round(h_attack,2),"defence_conceded_avg":round(h_defence,2),"venue_sample":len(home_home)},{"team":"Visitante","attack_avg":round(a_attack,2),"defence_conceded_avg":round(a_defence,2),"venue_sample":len(away_away)}],"caveats":["Estimaciones estadísticas orientativas; no son garantías ni recomendaciones de apuesta.","Se basan en goles de partidos finalizados de la competición seleccionada y no incorporan lesiones, alineaciones, descanso ni fuerza completa de rivales.","Si la muestra local/visitante es menor de 2 partidos, se usa el promedio general.","La API gratuita no ofrece remates, córners, tarjetas ni posesión para esta cobertura."]}
     except FootballDataError as e:
         fail(e)
 
