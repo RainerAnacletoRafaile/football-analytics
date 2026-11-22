@@ -16,7 +16,9 @@ class FootballDataClient:
             async with httpx.AsyncClient(timeout=25.0) as client:
                 response = await client.get(url, headers={"X-Auth-Token": self.settings.football_data_token}, params=params)
                 if response.status_code == 429:
-                    raise FootballDataError("Límite gratuito alcanzado: 10 peticiones por minuto. Espera un minuto.")
+                    reset=response.headers.get("X-RequestCounter-Reset")
+                    wait=(" El contador se restablece en aproximadamente "+reset+" segundos." if reset and reset.isdigit() else " Espera a que se restablezca la ventana de un minuto.")
+                    raise FootballDataError("Límite de football-data.org alcanzado (10 peticiones/minuto)."+wait)
                 if response.status_code == 403:
                     raise FootballDataError("Este recurso o competición no está incluido en tu plan gratuito.")
                 if response.status_code == 401:
