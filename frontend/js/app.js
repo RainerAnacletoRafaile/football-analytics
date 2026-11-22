@@ -110,7 +110,7 @@ async function openTeam(item) {
       if (index === 0) option.selected = true;
     });
     populateSeasons();
-    analysisFeedback.textContent = `Se encontraron ${leagues.length} competición(es). Elige la competición y genera el informe.`;
+    analysisFeedback.textContent = `Se encontraron ${leagues.length} competición(es). Plan Free: selecciona 2022, 2023 o 2024; la selección inicial es 2024.`;
   } catch (error) {
     analysisFeedback.className = "feedback error";
     analysisFeedback.textContent = error.message;
@@ -122,15 +122,30 @@ function populateSeasons() {
   const seasonSelect = document.querySelector("#season-select");
   const chosen = leagueSelect.selectedOptions[0];
   const seasons = chosen ? JSON.parse(chosen.dataset.seasons || "[]") : [];
+  // API-Football Free plan: supported seasons for this project.
+  const freePlanSeasons = [2024, 2023, 2022];
+  const available = seasons
+    .filter(season => freePlanSeasons.includes(Number(season.year)))
+    .sort((a,b)=>b.year-a.year);
   seasonSelect.replaceChildren();
-  seasons.slice().sort((a,b)=>b.year-a.year).forEach(season => {
+  available.forEach(season => {
     const option = document.createElement("option");
     option.value = season.year;
-    option.textContent = `${season.year}${season.current ? " · actual" : ""}`;
+    option.textContent = `${season.year}${Number(season.year) === 2024 ? " · última disponible en Free" : ""}`;
     seasonSelect.append(option);
-    if (season.current) option.selected = true;
   });
-  if (!seasonSelect.value && seasonSelect.options.length) seasonSelect.selectedIndex = 0;
+  if (available.some(season => Number(season.year) === 2024)) {
+    seasonSelect.value = "2024";
+  } else if (seasonSelect.options.length) {
+    seasonSelect.selectedIndex = 0;
+  } else {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "Sin temporadas Free disponibles";
+    option.disabled = true;
+    option.selected = true;
+    seasonSelect.append(option);
+  }
 }
 document.querySelector("#league-select").addEventListener("change", populateSeasons);
 document.querySelector("#close-analysis").addEventListener("click",()=>analysisPanel.hidden=true);
