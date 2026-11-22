@@ -1,4 +1,5 @@
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from time import monotonic
 from fastapi import FastAPI, HTTPException, Query
@@ -58,7 +59,7 @@ async def search_teams(name:str=Query(min_length=2),competition:str=Query(min_le
 @app.get("/api/teams/{team_id}/analysis")
 async def team_analysis(team_id:int,competition:str=Query(min_length=2),last:int=Query(default=10,ge=5,le=20)):
     code=competition.upper()
-    end=date.today()
+    end=datetime.now(ZoneInfo('America/Lima')).date()
     start=end-timedelta(days=240)
     params={"dateFrom":start.isoformat(),"dateTo":end.isoformat(),"competitions":code,"limit":100}
     try:
@@ -95,6 +96,6 @@ async def scorers(code:str,limit:int=Query(default=10,ge=1,le=20)):
 
 @app.get("/api/matches")
 async def matches(date_from:date|None=None,date_to:date|None=None):
-    start=date_from or date.today();end=date_to or start
+    start=date_from or datetime.now(ZoneInfo('America/Lima')).date();end=date_to or start
     try:return await cached("matches:"+str(start)+":"+str(end),"matches",{"dateFrom":start.isoformat(),"dateTo":end.isoformat()},ttl=300)
     except FootballDataError as e:fail(e)
