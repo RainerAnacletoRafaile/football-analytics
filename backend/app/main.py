@@ -168,8 +168,9 @@ def summarize_match_rows(raw, team_id, venue=None, limit=10):
         is_home=home.get("id")==team_id
         if venue=="home" and not is_home: continue
         if venue=="away" and is_home: continue
-        rows.append({"gf":hs if is_home else aws,"ga":aws if is_home else hs,"total":hs+aws})
-    return rows[:limit]
+        rows.append({"gf":hs if is_home else aws,"ga":aws if is_home else hs,"total":hs+aws,"date":m.get("utcDate") or ""})
+    rows.sort(key=lambda row:row["date"],reverse=True)
+    return [{k:v for k,v in row.items() if k!="date"} for row in rows[:limit]]
 
 @app.get("/api/matchup")
 async def matchup(home_team_id:int=Query(gt=0),away_team_id:int=Query(gt=0),competition:str=Query(min_length=2),last:int=Query(default=10,ge=5,le=20)):
