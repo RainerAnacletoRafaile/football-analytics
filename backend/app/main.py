@@ -59,42 +59,79 @@ async def search_teams(name:str=Query(min_length=2),competition:str=Query(min_le
 @app.get("/api/teams/{team_id}/analysis")
 async def team_analysis(team_id:int,competition:str=Query(min_length=2),last:int=Query(default=10,ge=5,le=20)):
     code=competition.upper()
-    end=datetime.now(ZoneInfo('America/Lima')).date()
-    start=end-timedelta(days=240)
-    params={"dateFrom":start.isoformat(),"dateTo":end.isoformat(),"competitions":code,"limit":100}
+    end=datetime.now(ZoneInfo("America/Lima")).date()
+    start=end-timedelta(days=365)
+    params={"dateFrom":start.isoformat(),"dateTo":end.isoformat(),"competitions":code,"limit":500}
     try:
         d=await cached("team-matches:"+str(team_id)+":"+code,"teams/"+str(team_id)+"/matches",params,ttl=600)
-        matches=[m for m in d.get("matches",[]) if m.get("status")=="FINISHED" and m.get("score",{}).get("fullTime",{}).get("home") is not None]
-        matches.sort(key=lambda m:m.get("utcDate",""),reverse=True)
+        raw=d.get("matches")
+        if not isinstance(raw,list):
+            raise HTTPException(status_code=502,detail="Respuesta inválida del proveedor: falta la lista de partidos.")
+        matches=[]
+        for m in raw:
+            if not isinstance(m,dict) or m.get("status")!="FINISHED":
+                continue
+            score=(m.get("score") or {}).get("fullTime") or {}
+            home_score,away_score=score.get("home"),score.get("away")
+            home=m.get("homeTeam") or {};away=m.get("awayTeam") or {}
+            if not isinstance(home_score,int) or not isinstance(away_score,int):
+                continue
+            if home.get("id")!=team_id and away.get("id")!=team_id:
+                continue
+            matches.append(m)
+        matches.sort(key=lambda m:m.get("utcDate") or "",reverse=True)
         rows=[]
         for m in matches[:last]:
-            home=m.get("homeTeam",{});away=m.get("awayTeam",{});score=m.get("score",{}).get("fullTime",{})
-            ih=home.get("id")==team_id
-            gf=score.get("home") if ih else score.get("away")
-            ga=score.get("away") if ih else score.get("home")
-            opp=away if ih else home
+            home=m.get("homeTeam") or {};away=m.get("awayTeam") or {}
+            score=m.get("score",{}).get("fullTime",{})
+            is_home=home.get("id")==team_id
+            gf=score["home"] if is_home else score["away"]
+            ga=score["away"] if is_home else score["home"]
+            opponent=away if is_home else home
             result="W" if gf>ga else "D" if gf==ga else "L"
-            rows.append({"id":m.get("id"),"date":m.get("utcDate"),"opponent":opp.get("name"),"venue":"Local" if ih else "Visitante","score":str(score.get("home"))+"-"+str(score.get("away")),"goals_for":gf,"goals_against":ga,"result":result})
-        n=len(rows);wins=sum(x["result"]=="W" for x in rows);draws=sum(x["result"]=="D" for x in rows);losses=sum(x["result"]=="L" for x in rows)
-        gf=sum(x["goals_for"] for x in rows);ga=sum(x["goals_against"] for x in rows);gd=gf-ga
+            rows.append({"id":m.get("id"),"date":m.get("utcDate"),"opponent":opponent.get("name") or "Rival no identificado","opponent_id":opponent.get("id"),"venue":"Local" if is_home else "Visitante","score":str(score["home"])+"-"+str(score["away"]),"goals_for":gf,"goals_against":ga,"total_goals":gf+ga,"result":result,"matchday":m.get("matchday"),"stage":m.get("stage")})
+        n=len(rows)
+        wins=sum(x["result"]=="W" for x in rows);draws=sum(x["result"]=="D" for x in rows);losses=sum(x["result"]=="L" for x in rows)
+        gf=sum(x["goals_for"] for x in rows);ga=sum(x["goals_against"] for x in rows)
         both=sum(x["goals_for"]>0 and x["goals_against"]>0 for x in rows)
-        o05=sum(x["goals_for"]+x["goals_against"]>=1 for x in rows);o15=sum(x["goals_for"]+x["goals_against"]>=2 for x in rows);o25=sum(x["goals_for"]+x["goals_against"]>=3 for x in rows);o35=sum(x["goals_for"]+x["goals_against"]>=4 for x in rows)
+        over05=sum(x["total_goals"]>=1 for x in rows);over15=sum(x["total_goals"]>=2 for x in rows);over25=sum(x["total_goals"]>=3 for x in rows);over35=sum(x["total_goals"]>=4 for x in rows)
         scored=sum(x["goals_for"]>0 for x in rows);conceded=sum(x["goals_against"]>0 for x in rows);clean=sum(x["goals_against"]==0 for x in rows)
-        pct=lambda x:round(x/n*100,1) if n else None
-        home=[x for x in rows if x["venue"]=="Local"];away=[x for x in rows if x["venue"]=="Visitante"]
-        split=lambda group:{"matches":len(group),"wins":sum(x["result"]=="W" for x in group),"draws":sum(x["result"]=="D" for x in group),"losses":sum(x["result"]=="L" for x in group),"goals_for":sum(x["goals_for"] for x in group),"goals_against":sum(x["goals_against"] for x in group),"avg_goals_for":round(sum(x["goals_for"] for x in group)/len(group),2) if group else None,"avg_goals_against":round(sum(x["goals_against"] for x in group)/len(group),2) if group else None}
+        pct=lambda value,total=n:round(value/total*100,1) if total else None
+        def split(group):
+            count=len(group)
+            return {"matches":count,"wins":sum(x["result"]=="W" for x in group),"draws":sum(x["result"]=="D" for x in group),"losses":sum(x["result"]=="L" for x in group),"goals_for":sum(x["goals_for"] for x in group),"goals_against":sum(x["goals_against"] for x in group),"avg_goals_for":round(sum(x["goals_for"] for x in group)/count,2) if count else None,"avg_goals_against":round(sum(x["goals_against"] for x in group)/count,2) if count else None}
         points=wins*3+draws
-        current_streak=None
+        streak=None
         if rows:
-            streak_result=rows[0]["result"];streak_count=0
-            for x in rows:
-                if x["result"]!=streak_result:break
-                streak_count+=1
-            current_streak={"result":streak_result,"count":streak_count}
-        goal_buckets={"0 goles":sum(x["goals_for"]+x["goals_against"]==0 for x in rows),"1-2 goles":sum(1<=x["goals_for"]+x["goals_against"]<=2 for x in rows),"3-4 goles":sum(3<=x["goals_for"]+x["goals_against"]<=4 for x in rows),"5+ goles":sum(x["goals_for"]+x["goals_against"]>=5 for x in rows)}
-        trends=[{"label":"Total goles +0.5","successes":o05,"total":n,"rate":pct(o05),"why":"Al menos un gol en "+str(o05)+" de "+str(n)+" partidos."},{"label":"Total goles +1.5","successes":o15,"total":n,"rate":pct(o15),"why":"Al menos dos goles en "+str(o15)+" de "+str(n)+" partidos."},{"label":"Total goles +2.5","successes":o25,"total":n,"rate":pct(o25),"why":"Al menos tres goles en "+str(o25)+" de "+str(n)+" partidos."},{"label":"Total goles +3.5","successes":o35,"total":n,"rate":pct(o35),"why":"Al menos cuatro goles en "+str(o35)+" de "+str(n)+" partidos."},{"label":"Ambos marcan","successes":both,"total":n,"rate":pct(both),"why":"Ambos equipos marcaron en "+str(both)+" de "+str(n)+" partidos."},{"label":"Equipo marca","successes":scored,"total":n,"rate":pct(scored),"why":"El equipo anotó al menos un gol en "+str(scored)+" partidos."},{"label":"Portería a cero","successes":clean,"total":n,"rate":pct(clean),"why":"No recibió goles en "+str(clean)+" partidos."}]
-        return {"team_id":team_id,"competition":code,"source":"football-data.org","sample_size":n,"requested_sample":last,"recent":{"matches":rows,"record":{"wins":wins,"draws":draws,"losses":losses,"points":points,"points_per_game":round(points/n,2) if n else None,"win_rate":pct(wins),"draw_rate":pct(draws),"loss_rate":pct(losses)},"goals_for":gf,"goals_against":ga,"goal_difference":gd,"avg_total_goals":round((gf+ga)/n,2) if n else None,"avg_goals_for":round(gf/n,2) if n else None,"avg_goals_against":round(ga/n,2) if n else None,"btts_rate":pct(both),"scored_rate":pct(scored),"conceded_rate":pct(conceded),"clean_sheet_rate":pct(clean),"home":split(home),"away":split(away),"goal_buckets":goal_buckets,"current_streak":current_streak,"goals_by_match":[{"opponent":x["opponent"],"date":x["date"],"for":x["goals_for"],"against":x["goals_against"],"total":x["goals_for"]+x["goals_against"],"result":x["result"]} for x in reversed(rows)]},"trends":trends,"methodology":{"sample":"Últimos "+str(last)+" partidos finalizados dentro de los últimos 240 días.","frequency":"Aciertos observados / partidos válidos × 100.","uncertainty":"Frecuencia descriptiva, no probabilidad predictiva calibrada.","limitations":["Cobertura limitada a las competiciones del plan gratuito.","El proveedor no ofrece remates, córners, tarjetas ni posesión en el plan gratuito.","Los marcadores pueden tener retraso.","No se ajusta por lesiones, alineaciones ni fuerza del rival.","Las muestras pequeñas pueden variar mucho; interpreta porcentajes junto al número de partidos."]}}
-    except FootballDataError as e:fail(e)
+            result=rows[0]["result"];count=0
+            for row in rows:
+                if row["result"]!=result:break
+                count+=1
+            streak={"result":result,"count":count}
+        buckets={"0 goles":sum(x["total_goals"]==0 for x in rows),"1-2 goles":sum(1<=x["total_goals"]<=2 for x in rows),"3-4 goles":sum(3<=x["total_goals"]<=4 for x in rows),"5+ goles":sum(x["total_goals"]>=5 for x in rows)}
+        trends=[]
+        for label,successes,why in [
+            ("Total goles +0.5",over05,"Al menos un gol en el partido."),
+            ("Total goles +1.5",over15,"Al menos dos goles en el partido."),
+            ("Total goles +2.5",over25,"Al menos tres goles en el partido."),
+            ("Total goles +3.5",over35,"Al menos cuatro goles en el partido."),
+            ("Ambos marcan",both,"Los dos equipos anotaron."),
+            ("Equipo marca",scored,"El equipo anotó al menos un gol."),
+            ("Portería a cero",clean,"El equipo no recibió goles.")]:
+            trends.append({"label":label,"successes":successes,"total":n,"rate":pct(successes),"why":why+" "+str(successes)+" de "+str(n)+" partidos."})
+        league_context=None
+        try:
+            table_data=await cached("standings:"+code,"competitions/"+code+"/standings",ttl=1800)
+            total_table=next((x.get("table",[]) for x in table_data.get("standings",[]) if x.get("type")=="TOTAL"),[])
+            team_row=next((x for x in total_table if (x.get("team") or {}).get("id")==team_id),None)
+            valid_rows=[x for x in total_table if isinstance(x.get("playedGames"),int) and x.get("playedGames",0)>0]
+            if team_row:
+                league_context={"position":team_row.get("position"),"played":team_row.get("playedGames"),"points":team_row.get("points"),"league_teams":len(total_table),"league_avg_goals_for":round(sum(x.get("goalsFor",0) for x in valid_rows)/len(valid_rows),2) if valid_rows else None,"league_avg_goals_against":round(sum(x.get("goalsAgainst",0) for x in valid_rows)/len(valid_rows),2) if valid_rows else None,"team_goals_for":team_row.get("goalsFor"),"team_goals_against":team_row.get("goalsAgainst"),"team_goal_difference":team_row.get("goalDifference")}
+        except (FootballDataError,AttributeError,TypeError,ValueError):
+            league_context=None
+        return {"team_id":team_id,"competition":code,"source":"football-data.org","generated_at":datetime.now(ZoneInfo("America/Lima")).isoformat(),"period":{"from":start.isoformat(),"to":end.isoformat()},"sample_size":n,"requested_sample":last,"data_quality":{"valid_finished_matches":n,"discarded_or_unfinished_matches":len(raw)-len(matches),"sample_label":"Muestra reducida" if n<5 else "Muestra moderada" if n<10 else "Muestra amplia" if n>=15 else "Muestra estándar","warning":"La muestra es pequeña; evita sacar conclusiones fuertes." if n<5 else ("Los porcentajes describen estos partidos, no garantizan el siguiente resultado." if n<15 else "La muestra es descriptiva y no constituye una predicción.")},"league_context":league_context,"recent":{"matches":rows,"record":{"wins":wins,"draws":draws,"losses":losses,"points":points,"points_per_game":round(points/n,2) if n else None,"win_rate":pct(wins),"draw_rate":pct(draws),"loss_rate":pct(losses)},"goals_for":gf,"goals_against":ga,"goal_difference":gf-ga,"avg_total_goals":round((gf+ga)/n,2) if n else None,"avg_goals_for":round(gf/n,2) if n else None,"avg_goals_against":round(ga/n,2) if n else None,"btts_rate":pct(both),"scored_rate":pct(scored),"conceded_rate":pct(conceded),"clean_sheet_rate":pct(clean),"home":split([x for x in rows if x["venue"]=="Local"]),"away":split([x for x in rows if x["venue"]=="Visitante"]),"goal_buckets":buckets,"current_streak":streak,"goals_by_match":[{"opponent":x["opponent"],"date":x["date"],"for":x["goals_for"],"against":x["goals_against"],"total":x["total_goals"],"result":x["result"]} for x in reversed(rows)]},"trends":trends,"methodology":{"sample":"Últimos "+str(last)+" partidos finalizados en los últimos 365 días; se excluyen partidos sin marcador final válido.","frequency":"Frecuencia observada = aciertos / partidos válidos × 100.","uncertainty":"No es una probabilidad predictiva ni una recomendación de apuesta.","limitations":["Se utilizan únicamente campos que entrega football-data.org en el plan contratado.","No se generan remates, tiros a puerta, córners, posesión o tarjetas si el proveedor no los entrega en esta cobertura.","Los marcadores y calendarios pueden tener retraso según el plan.","La tabla de liga puede no estar disponible para algunas competiciones o fases.","No se ajusta por lesiones, alineaciones, descanso ni fuerza del rival."]}}
+    except FootballDataError as e:
+        fail(e)
 
 @app.get("/api/competitions/{code}/standings")
 async def standings(code:str):
